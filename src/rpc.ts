@@ -36,8 +36,8 @@ class RPC extends EventEmitter {
         })
     }
 
-    public notify = (methodName: string, args: CallArgs = []) => {
-        const notificationObject = jsonrpc.notification(methodName, args);
+    public notify = (name: string, args: CallArgs = []) => {
+        const notificationObject = jsonrpc.notification(name, args);
         this.send(notificationObject.serialize());
     }
 
@@ -59,12 +59,12 @@ class RPC extends EventEmitter {
         }
     }
 
-    public addNotificationListener = (methodName: string, listener: (data: any) => void) => {
-        this.addListener(`notification/${methodName}`, listener);
+    public addNotificationListener = (name: string, listener: (...args: any[]) => void) => {
+        this.addListener(`notification/${name}`, listener);
     }
 
-    public removeNotificationListener = (methodName: string, listener: (data: any) => void) => {
-        this.removeListener(`notification/${methodName}`, listener);
+    public removeNotificationListener = (name: string, listener: (...data: any[]) => void) => {
+        this.removeListener(`notification/${name}`, listener);
     }
 
     public receive = (message: string) => {
