@@ -93,13 +93,25 @@ import { RPC } from 'jsonrpcv2'
 const rpc = new RPC();
 ```
 
+### rpc.receive(*message*)
+
+对端的JSON RPC消息通过该方法传入
+
+- `message` {`string`} JSON RPC报文
+
+### rpc.setTransmitter(*transmitter*)
+
+到对端的JSON RPC消息从这里发出
+
+- `transmitter` {`(message:string)=>Promise`} 发送通道
+
 ### rpc.expose(*methodName*, *method*)
 
 暴露方法，供对端调用
 
 - `methodName` {`string`} 暴露的方法名称
 - `method` {`Function`} 方法实例
-  > 根据[JSON-RPC 2.0](https://wiki.geekdream.com/Specification/json-rpc_2.0.html) 协议标准，暴露的方法，参数支持索引和名称关联, JavaScript目前仅支持索引
+  > 根据[JSON-RPC 2.0](https://wiki.geekdream.com/Specification/json-rpc_2.0.html) 标准，暴露方法的参数支持索引和名称关联, jsonrpcv2目前暂时仅支持索引
 
 ### rpc.unexpose(*methodName*)
 
@@ -109,13 +121,32 @@ const rpc = new RPC();
 
 ### rpc.call(*methodName*,*args*)
 
-调用远端方法
+调用对端方法
 
-- `methodName` {`string`} 远端方法名
-- `args` {`Array` | `Object`} 参数，索引 或 名称关联
-  
+- `methodName` {`string`} 方法名称
+- `args` {`Array` | `Object`} 参数，索引（Array）或名称关联（Object）
+- `return` {`Promise<Result>`}
 
+### rpc.addNotificationListener(*name*, *callback*)
 
+添加通知监听
+
+- `name` {`string`} 通知名称
+- `callback` {`Function`} 通知回调
+
+### rpc.removeNotificationListener(*name*, *callback*)
+
+删除通知监听
+
+- `name` {`string`} 通知名称
+- `callback` {`Function`} 通知回调
+
+### rpc.notify(*name*,*args*)
+
+通知对端
+
+- `name` {`string`} 通知名称
+- `args` {`Array` | `Object`} 参数，索引（Array）或名称关联（Object）
 
 
 
