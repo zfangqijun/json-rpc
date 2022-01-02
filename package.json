@@ -1,7 +1,7 @@
 {
 	"name": "jsonrpcv2",
-	"version": "0.0.8-alpha",
-	"description": "",
+	"version": "0.0.9-alpha",
+	"description": "JSON-RPC 2.0 for JavaScript",
 	"main": "dist",
 	"scripts": {
 		"build": "rimraf dist && tsc",
