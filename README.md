@@ -95,13 +95,13 @@ const rpc = new RPC();
 
 ### rpc.receive(*message*)
 
-对端的JSON RPC消息通过该方法传入
+对端的RPC消息通过该方法通知到本地RPC
 
 - `message` {`string`} JSON RPC报文
 
 ### rpc.setTransmitter(*transmitter*)
 
-到对端的JSON RPC消息从这里发出
+到对端的RPC消息从这里发出，消息如何放松到对端，取决于你的transmitter
 
 - `transmitter` {`(message:string)=>Promise`} 发送通道
 
@@ -127,14 +127,14 @@ const rpc = new RPC();
 - `args` {`Array` | `Object`} 参数，索引（Array）或名称关联（Object）
 - `return` {`Promise<Result>`}
 
-### rpc.addNotificationListener(*name*, *callback*)
+### rpc.onNotification(*name*, *callback*)
 
 添加通知监听
 
 - `name` {`string`} 通知名称
 - `callback` {`Function`} 通知回调
 
-### rpc.removeNotificationListener(*name*, *callback*)
+### rpc.removeNotification(*name*, *callback*)
 
 删除通知监听
 
