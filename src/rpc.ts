@@ -24,7 +24,7 @@ class RPC extends EventEmitter {
         this.addListener('message', this.handleMessage);
     }
 
-    public call = (methodName: string, args: CallArgs = []) => {
+    public call = (methodName: string, args?: CallArgs) => {
         return new Promise((resolve, reject) => {
             const id = uuid();
             const requestObject = jsonrpc.request(id, methodName, args);
@@ -36,7 +36,7 @@ class RPC extends EventEmitter {
         })
     }
 
-    public notify = (name: string, args: CallArgs = []) => {
+    public notify = (name: string, args?: CallArgs) => {
         const notificationObject = jsonrpc.notification(name, args);
         this.send(notificationObject.serialize());
     }
