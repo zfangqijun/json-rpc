@@ -106,8 +106,8 @@ describe('call', () => {
 
 describe('notify', () => {
     const mockNotificationListener = jest.fn();
-    test('addNotificationListener', () => {
-        expect(remote.addNotificationListener('test-notification', mockNotificationListener)).toBeUndefined()
+    test('onNotification', () => {
+        expect(remote.onNotification('test-notification', mockNotificationListener)).toBeUndefined()
     })
     test('no args', () => {
         local.notify('test-notification');
@@ -119,8 +119,8 @@ describe('notify', () => {
         expect(mockNotificationListener).toBeCalledWith(['string', 2188, false, {}, []])
         mockNotificationListener.mockClear();
     });
-    test('removeNotificationListener', () => {
-        expect(remote.removeNotificationListener('test-notification', mockNotificationListener)).toBeUndefined()
+    test('removeNotification', () => {
+        expect(remote.removeNotification('test-notification', mockNotificationListener)).toBeUndefined()
     })
 })
 

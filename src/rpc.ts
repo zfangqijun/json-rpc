@@ -41,7 +41,7 @@ class RPC extends EventEmitter {
         this.send(notificationObject.serialize());
     }
 
-    public expose = (methodName: string, method: RPCMethod) => {
+    public expose(methodName: string, method: RPCMethod) {
         if (this.exposeMethods.has(methodName)) {
             throw new Error(`method ${methodName} exposed\r\n${methodName}方法已暴露`)
         }
@@ -59,12 +59,12 @@ class RPC extends EventEmitter {
         }
     }
 
-    public addNotificationListener = (name: string, listener: (...args: any[]) => void) => {
-        this.addListener(`notification/${name}`, listener);
+    public onNotification = (name: string, callback: (...args: any[]) => void) => {
+        this.addListener(`notification/${name}`, callback);
     }
 
-    public removeNotificationListener = (name: string, listener: (...data: any[]) => void) => {
-        this.removeListener(`notification/${name}`, listener);
+    public removeNotification = (name: string, callback: (...data: any[]) => void) => {
+        this.removeListener(`notification/${name}`, callback);
     }
 
     public receive = (message: string) => {
