@@ -3,7 +3,7 @@
     "target": "ES2019",
     "module": "ESNext",
     "lib": ["ES2019"],
-    "outDir": "./dist",
+    "outDir": "./build",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
