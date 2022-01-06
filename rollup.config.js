@@ -1,12 +1,13 @@
 
-import nodeResolve from '@rollup/plugin-node-resolve';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs'
+import { terser } from 'rollup-plugin-terser'
 
 export default {
     input: './build/index.js',
     output: [
         {
-            file: './dist/index.cjs',
+            file: './dist/index.js',
             format: 'cjs',
         },
         {
@@ -23,6 +24,9 @@ export default {
         commonjs(),
         nodeResolve({
             preferBuiltins: false
+        }),
+        terser({
+            mangle: false
         }),
     ]
 }
