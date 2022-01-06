@@ -24,7 +24,7 @@ class RPC extends EventEmitter {
         this.addListener('message', this.handleMessage);
     }
 
-    public call = (methodName: string, args?: CallArgs) => {
+    public call(methodName: string, args?: CallArgs) {
         return new Promise((resolve, reject) => {
             const id = uuid();
             const requestObject = jsonrpc.request(id, methodName, args);
@@ -36,7 +36,7 @@ class RPC extends EventEmitter {
         })
     }
 
-    public notify = (name: string, args?: CallArgs) => {
+    public notify(name: string, args?: CallArgs) {
         const notificationObject = jsonrpc.notification(name, args);
         this.send(notificationObject.serialize());
     }
@@ -51,7 +51,7 @@ class RPC extends EventEmitter {
         this.exposeMethods.set(methodName, method);
     }
 
-    public unexpose = (methodName: string) => {
+    public unexpose(methodName: string) {
         if (this.exposeMethods.has(methodName)) {
             this.exposeMethods.delete(methodName);
         } else {
@@ -59,19 +59,19 @@ class RPC extends EventEmitter {
         }
     }
 
-    public onNotification = (name: string, callback: (...args: any[]) => void) => {
+    public onNotification(name: string, callback: (...args: any[]) => void) {
         this.addListener(`notification/${name}`, callback);
     }
 
-    public removeNotification = (name: string, callback: (...data: any[]) => void) => {
+    public removeNotification(name: string, callback: (...data: any[]) => void) {
         this.removeListener(`notification/${name}`, callback);
     }
 
-    public receive = (message: string) => {
+    public receive(message: string) {
         this.emit('message', message);
     }
 
-    public setTransmitter = (transmitter: (message: string) => Promise<unknown>) => {
+    public setTransmitter(transmitter: (message: string) => Promise<unknown>) {
         if (typeof transmitter !== 'function') {
             throw new Error(`transmitter must be function\r\ntransmitter必须为function`)
         }
