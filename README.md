@@ -1,3 +1,5 @@
+[![Node.js CI](https://github.com/zfangqijun/json-rpc/actions/workflows/node.js.yml/badge.svg)](https://github.com/zfangqijun/json-rpc/actions/workflows/node.js.yml)
+
 # json-rpc
 
 [JSON-RPC 2.0](https://wiki.geekdream.com/Specification/json-rpc_2.0.html) 协议的JavaScript实现，兼容Node和Web
