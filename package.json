@@ -4,7 +4,7 @@
 	"description": "JSON-RPC 2.0 Library for JavaScript",
 	"main": "dist/index.js",
 	"module": "dist/index.mjs",
-	"browser": "dist/browser.js",
+	"browser": "dist/index.mjs",
 	"types": "dist/types",
 	"scripts": {
 		"build": "run-s clean tsc build-bundle",
