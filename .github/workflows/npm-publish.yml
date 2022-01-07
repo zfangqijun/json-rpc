@@ -20,6 +20,7 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: 16
+          registry-url: https://registry.npmjs.org/
           cache: 'pnpm'
 
       - run: pnpm i
@@ -27,5 +28,4 @@ jobs:
       - run: pnpm build
       - run: pnpm publish
         env:
-          NODE_AUTH_TOKEN: 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
-          # NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
