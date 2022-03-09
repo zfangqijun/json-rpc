@@ -1,5 +1,5 @@
-[![Node.js CI](https://github.com/zfangqijun/json-rpc/actions/workflows/node.js.yml/badge.svg)](https://github.com/zfangqijun/json -rpc/actions/workflows/node.js.yml)
-[![Node.js Package](https://github.com/zfangqijun/json-rpc/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/zfangqijun/json -rpc/actions/workflows/npm-publish.yml)
+[![Node.js CI](https://github.com/zfangqijun/json-rpc/actions/workflows/node.js.yml/badge.svg)](https://github.com/zfangqijun/json-rpc/actions/workflows/node.js.yml)
+[![Node.js Package](https://github.com/zfangqijun/json-rpc/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/zfangqijun/json-rpc/actions/workflows/npm-publish.yml)
 
 # json-rpc
 
@@ -19,9 +19,9 @@
 
 ```bash
 npm i jsonrpcv2
-````
+```
 
-## use
+## Use
 
 ### Server
 
@@ -55,7 +55,7 @@ wss.on('connection', (websocket) => {
         serverRPC.receive(Buffer.from(message).toString());
     });
 });
-````
+```
 
 ### WebView
 
@@ -85,7 +85,7 @@ ws.onopen = function () {
             // error
         })
 }
-````
+```
 
 ##API
 
@@ -94,7 +94,7 @@ ws.onopen = function () {
 ```ts
 import { RPC } from 'jsonrpcv2'
 const rpc = new RPC();
-````
+```
 
 ### rpc.receive(*message*)
 
