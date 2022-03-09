@@ -15,13 +15,13 @@
 
 ## do nothing
 
-## Install and use
+## Install
 
 ```bash
 npm i jsonrpcv2
 ```
 
-## Use
+## Usage
 
 ### Server
 
@@ -87,7 +87,7 @@ ws.onopen = function () {
 }
 ```
 
-##API
+## API
 
 ### rpc = new RPC()
 
