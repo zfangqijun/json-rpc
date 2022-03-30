@@ -8,12 +8,7 @@
 - Weakening client/server, any end can actively send requests and notifications
 - Provides a simple and easy-to-use Promise interface
 - Not limited to Web/Node, such as: WebView/Native
-
-## What have you done
-
 - Parse JSON-PRC 2.0 data packets, and provide interfaces such as method exposure and invocation
-
-## do nothing
 
 ## Install
 

@@ -8,12 +8,7 @@
 - 弱化client/server，任何一端都可以主动发出request和notification
 - 提供简单、易用的Promise接口
 - 不仅限于Web/Node，如：WebView/Native
-
-## 做了什么
-
 - 解析JSON-PRC 2.0数据报文，提供方法暴露、调用等接口
-
-## 不做什么
 
 ## 安装和使用
 
