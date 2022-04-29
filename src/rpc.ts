@@ -25,6 +25,10 @@ class RPC extends EventEmitter {
     }
 
     public call(methodName: string, args?: CallArgs) {
+        return this.invoke(methodName, args);
+    }
+
+    public invoke(methodName: string, args?: CallArgs) {
         return new Promise((resolve, reject) => {
             const id = uuid();
             const requestObject = jsonrpc.request(id, methodName, args);
