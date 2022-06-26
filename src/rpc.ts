@@ -25,10 +25,6 @@ class RPC extends EventEmitter {
     }
 
     public call(methodName: string, args?: CallArgs) {
-        return this.invoke(methodName, args);
-    }
-
-    public invoke(methodName: string, args?: CallArgs) {
         return new Promise((resolve, reject) => {
             const id = uuid();
             const requestObject = jsonrpc.request(id, methodName, args);
@@ -38,6 +34,10 @@ class RPC extends EventEmitter {
                 reject(error);
             })
         })
+    }
+
+    public invoke(methodName: string, ...args: Defined[]) {
+        return this.call(methodName, args)
     }
 
     public notify(name: string, args?: CallArgs) {

@@ -6,6 +6,10 @@ const transport = new EventEmitter();
 const local = new RPC();
 const remote = new RPC();
 
+remote.expose('noResultMethod', jest.fn())
+remote.expose('rejectMethod', jest.fn().mockRejectedValue('rejectMethod.value'))
+remote.expose('throwMethod', () => { throw 'throwMethod.value' })
+
 transport.on('remote-to-local', (message) => {
     local.receive(message);
 })
@@ -74,10 +78,6 @@ describe('unexpose', () => {
 
 
 describe('call', () => {
-    remote.expose('noResultMethod', jest.fn())
-    remote.expose('rejectMethod', jest.fn().mockRejectedValue('rejectMethod.value'))
-    remote.expose('throwMethod', () => { throw 'throwMethod.value' })
-
     test('没有返回值的函数 返回null', () => {
         const result = local.call('noResultMethod')
         expect(result).resolves.toBeNull()
@@ -100,6 +100,33 @@ describe('call', () => {
 
     test('fail', () => {
         const result = local.call('methodNotFound');
+        expect(result).rejects.toMatchObject({ code: -32601 })
+    });
+})
+
+describe('invoke', () => {
+    test('没有返回值的函数 返回null', () => {
+        const result = local.invoke('noResultMethod')
+        expect(result).resolves.toBeNull()
+    });
+
+    test('调用的函数抛异常 reject', () => {
+        expect(local.invoke('rejectMethod')).rejects.toMatchObject({ data: { error: 'rejectMethod.value' } })
+        expect(local.invoke('throwMethod')).rejects.toMatchObject({ data: { error: 'throwMethod.value' } })
+    });
+
+    test('no args', () => {
+        const result = local.invoke('syncMethod');
+        expect(result).resolves.toEqual({ method: 'syncMethod', callArgs: [] })
+    });
+
+    test('multiple args', () => {
+        const result = local.invoke('asyncMethod', 'string', 2188, false, {}, []);
+        expect(result).resolves.toEqual({ method: 'asyncMethod', callArgs: ['string', 2188, false, {}, []] })
+    });
+
+    test('fail', () => {
+        const result = local.invoke('methodNotFound');
         expect(result).rejects.toMatchObject({ code: -32601 })
     });
 })
