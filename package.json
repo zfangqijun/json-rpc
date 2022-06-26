@@ -1,6 +1,6 @@
 {
 	"name": "jsonrpcv2",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "JSON-RPC 2.0 Library for JavaScript",
 	"main": "dist/index.js",
 	"module": "dist/index.mjs",
