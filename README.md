@@ -3,22 +3,22 @@
 
 # json-rpc
 
-[JSON-RPC 2.0](https://wiki.geekdream.com/Specification/json-rpc_2.0.html) JavaScript implementation of the protocol, compatible with Node and Web
+[JSON-RPC 2.0](https://wiki.geekdream.com/Specification/json-rpc_2.0.html) 协议的JavaScript实现，兼容Node和Web
 
-- Weakening client/server, any end can actively send requests and notifications
-- Provides a simple and easy-to-use Promise interface
-- Not limited to Web/Node, such as: WebView/Native
-- Parse JSON-PRC 2.0 data packets, and provide interfaces such as method exposure and invocation
+- 弱化client/server，任何一端都可以主动发出request和notification
+- 提供简单、易用的Promise接口
+- 不仅限于Web/Node，如：WebView/Native
+- 解析JSON-PRC 2.0数据报文，提供方法暴露、调用等接口
 
-## Install
+## 安装和使用
 
 ```bash
 npm i jsonrpcv2
 ```
 
-## Usage
+## 使用
 
-### Server
+### 服务端
 
 ```ts
 import { WebSocketServer } from 'ws';
@@ -26,12 +26,12 @@ import { RPC } from 'jsonrpcv2';
 
 const serverRPC = new RPC();
 
-// register synchronization method
+// 注册同步方法
 serverRPC.expose('syncMethod', () => {
     return 'syncMethod.result';
 });
 
-// register async method
+// 注册异步方法
 serverRPC.expose('asyncMethod', () => {
     return Promise.resolve('asyncMethod.result');
 });
@@ -41,11 +41,11 @@ const wss = new WebSocketServer({
 });
 
 wss.on('connection', (websocket) => {
-    // rpc sends messages via websocket
+    // rpc通过websocket发送消息
     serverRPC.setTransmitter((message) => {
         websocket.send(message);
     });
-    // websocket receives the message and forwards it to rpc
+    // websocket接受到消息转发给rpc
     websocket.on('message', (message) => {
         serverRPC.receive(Buffer.from(message).toString());
     });
@@ -59,10 +59,10 @@ import { RPC } from 'jsonrpcv2';
 
 const clientRPC = new RPC();
 
-// web's websocket native object
+// web的websocket原生对象
 const ws = new WebSocket('localhost:2188');
 ws.onopen = function () {
-    // Call the server syncMethod method
+    // 调用服务端syncMethod方法
     clientRPC.call('syncMethod')
         .then((result) => {
             console.log(result); // syncMethod.result
@@ -71,7 +71,7 @@ ws.onopen = function () {
             // error
         });
 
-    // Call the server asyncMethod method
+    // 调用服务端 asyncMethod 方法
     clientRPC.call('asyncMethod')
         .then((result) => {
             console.log(result); // asyncMethod.result
@@ -93,55 +93,57 @@ const rpc = new RPC();
 
 ### rpc.receive(*message*)
 
-The RPC message of the opposite end is notified to the local RPC through this method
+对端的RPC消息通过该方法通知到本地RPC
 
-- `message` {`string`} JSON RPC message
+- `message` {`string`} JSON RPC报文
 
 ### rpc.setTransmitter(*transmitter*)
 
-The RPC message to the peer is sent from here, how the message is relaxed to the peer depends on your transmitter
+到对端的RPC消息从这里发出，消息如何放松到对端，取决于你的transmitter
 
-- `transmitter` {`(message:string)=>Promise`} send channel
+- `transmitter` {`(message:string)=>Promise`} 发送通道
 
 ### rpc.expose(*methodName*, *method*)
 
-Expose the method for the peer to call
+暴露方法，供对端调用
 
-- `methodName` {`string`} exposed method name
-- `method` {`Function`} method instance
-  > According to [JSON-RPC 2.0](https://wiki.geekdream.com/Specification/json-rpc_2.0.html) standard, parameters of exposed methods support index and name association, jsonrpcv2 currently only supports index
+- `methodName` {`string`} 暴露的方法名称
+- `method` {`Function`} 方法实例
+  > 根据[JSON-RPC 2.0](https://wiki.geekdream.com/Specification/json-rpc_2.0.html) 标准，暴露方法的参数支持索引和名称关联, jsonrpcv2目前暂时仅支持索引
 
 ### rpc.unexpose(*methodName*)
 
-Cancel an exposed method
+取消已暴露的方法
 
-- `methodName` {`string`} exposed method name
+- `methodName` {`string`} 已暴露的方法名称
 
 ### rpc.call(*methodName*,*args*)
 
-call peer method
+调用对端方法
 
-- `methodName` {`string`} method name
-- `args` {`Array` | `Object`} arguments, index (Array) or name association (Object)
+- `methodName` {`string`} 方法名称
+- `args` {`Array` | `Object`} 参数，索引（Array）或名称关联（Object）
 - `return` {`Promise<Result>`}
 
 ### rpc.onNotification(*name*, *callback*)
 
-Add notification listener
+添加通知监听
 
-- `name` {`string`} notification name
-- `callback` {`Function`} notification callback
+- `name` {`string`} 通知名称
+- `callback` {`Function`} 通知回调
 
 ### rpc.removeNotification(*name*, *callback*)
 
-delete notification listener
+删除通知监听
 
-- `name` {`string`} notification name
-- `callback` {`Function`} notification callback
+- `name` {`string`} 通知名称
+- `callback` {`Function`} 通知回调
 
 ### rpc.notify(*name*,*args*)
 
-Notify the peer
+通知对端
 
-- `name` {`string`} notification name
-- `args` {`Array` | `Object`} arguments, index (Array) or name association (Object)
+- `name` {`string`} 通知名称
+- `args` {`Array` | `Object`} 参数，索引（Array）或名称关联（Object）
+
+
