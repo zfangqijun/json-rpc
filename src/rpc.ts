@@ -55,12 +55,30 @@ class RPC extends EventEmitter {
         this.exposeMethods.set(methodName, method);
     }
 
+    public exposeFromObject(object: object) {
+        for (const [key, value] of Object.entries(object)) {
+            if (typeof value === 'function') {
+                this.expose(key, value);
+            }
+        }
+    }
+
+    public exposeFromArray(array: Array<[string, RPCMethod]>) {
+        for (const [key, value] of array) {
+            this.expose(key, value);
+        }
+    }
+
     public unexpose(methodName: string) {
         if (this.exposeMethods.has(methodName)) {
             this.exposeMethods.delete(methodName);
         } else {
             throw new Error(`method ${methodName} not exist\r\n${methodName}方法 不存在`)
         }
+    }
+
+    public unexposeAll() {
+        this.exposeMethods.clear();
     }
 
     public onNotification(name: string, callback: (...args: any[]) => void) {
