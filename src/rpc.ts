@@ -119,7 +119,7 @@ class RPC extends EventEmitter {
         const method = this.exposeMethods.get(methodName);
 
         if (method === undefined) {
-            const errorObject = jsonrpc.error(id, jsonrpc.JsonRpcError.methodNotFound({ message: `方法不存在` }))
+            const errorObject = jsonrpc.error(id, jsonrpc.JsonRpcError.methodNotFound('该方法不存在或无效'))
             this.send(errorObject.serialize())
             return;
         }
@@ -135,7 +135,8 @@ class RPC extends EventEmitter {
                 this.send(successObject.serialize())
             }
             catch (error) {
-                const errorObject = jsonrpc.error(id, jsonrpc.JsonRpcError.internalError({ message: `方法调用内部异常`, error }))
+                const jsonRpcError = new jsonrpc.JsonRpcError('对端方法执行内部异常', 32000, Object.prototype.valueOf.call(error))
+                const errorObject = jsonrpc.error(id, jsonRpcError)
                 this.send(errorObject.serialize())
             }
         }
@@ -160,7 +161,7 @@ class RPC extends EventEmitter {
             return
         }
 
-        const errorObject = jsonrpc.error(id, jsonrpc.JsonRpcError.invalidParams({ message: `传入的参数格式错误` }))
+        const errorObject = jsonrpc.error(id, jsonrpc.JsonRpcError.invalidParams('无效的方法参数'))
         this.send(errorObject.serialize())
     }
 
