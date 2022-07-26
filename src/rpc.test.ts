@@ -84,8 +84,8 @@ describe('call', () => {
     });
 
     test('调用的函数抛异常 reject', () => {
-        expect(local.call('rejectMethod')).rejects.toMatchObject({ data: { error: 'rejectMethod.value' } })
-        expect(local.call('throwMethod')).rejects.toMatchObject({ data: { error: 'throwMethod.value' } })
+        expect(local.call('rejectMethod')).rejects.toMatchObject({ data: 'rejectMethod.value' })
+        expect(local.call('throwMethod')).rejects.toMatchObject({ data: 'throwMethod.value' })
     });
 
     test('no args', () => {
@@ -111,8 +111,8 @@ describe('invoke', () => {
     });
 
     test('调用的函数抛异常 reject', () => {
-        expect(local.invoke('rejectMethod')).rejects.toMatchObject({ data: { error: 'rejectMethod.value' } })
-        expect(local.invoke('throwMethod')).rejects.toMatchObject({ data: { error: 'throwMethod.value' } })
+        expect(local.invoke('rejectMethod')).rejects.toMatchObject({ data: 'rejectMethod.value' })
+        expect(local.invoke('throwMethod')).rejects.toMatchObject({ data: 'throwMethod.value' })
     });
 
     test('no args', () => {
