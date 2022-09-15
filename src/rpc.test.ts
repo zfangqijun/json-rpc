@@ -50,7 +50,7 @@ describe('expose', () => {
 
     test('多次注册同名函数 应该抛异常', () => {
         expect(() => {
-            remote.expose('asyncMethod', () => { });
+            remote.expose('syncMethod', () => { });
         }).toThrow();
     })
 
@@ -58,6 +58,42 @@ describe('expose', () => {
         expect(() => {
             // @ts-ignore
             remote.expose('method', {});
+        }).toThrow();
+    })
+})
+
+describe('exposeFromObject', () => {
+    it('expose methods', () => {
+        remote.exposeFromObject({
+            'exposeFromObject.syncMethod': syncMethod,
+            'exposeFromObject.asyncMethod': asyncMethod,
+        })
+    })
+
+    test('多次注册同名函数 应该抛异常', () => {
+        expect(() => {
+            remote.exposeFromObject({
+                'exposeFromObject.syncMethod': syncMethod,
+                'exposeFromObject.asyncMethod': asyncMethod,
+            })
+        }).toThrow();
+    })
+})
+
+describe('exposeFromArray', () => {
+    it('expose methods', () => {
+        remote.exposeFromArray([
+            ['exposeFromArray.syncMethod', syncMethod],
+            ['exposeFromArray.asyncMethod', asyncMethod]
+        ])
+    })
+
+    test('多次注册同名函数 应该抛异常', () => {
+        expect(() => {
+            remote.exposeFromArray([
+                ['exposeFromArray.syncMethod', syncMethod],
+                ['exposeFromArray.asyncMethod', asyncMethod]
+            ])
         }).toThrow();
     })
 })
@@ -76,32 +112,21 @@ describe('unexpose', () => {
     })
 })
 
+describe('unexposeAll', () => {
+    local.exposeFromObject({
+        'test.method1': jest.fn(),
+        'test.method2': jest.fn()
+    })
 
-describe('call', () => {
-    test('没有返回值的函数 返回null', () => {
-        const result = local.call('noResultMethod')
-        expect(result).resolves.toBeNull()
+    test('反注册成功', () => {
+        local.unexposeAll();
     });
 
-    test('调用的函数抛异常 reject', () => {
-        expect(local.call('rejectMethod')).rejects.toMatchObject({ data: 'rejectMethod.value' })
-        expect(local.call('throwMethod')).rejects.toMatchObject({ data: 'throwMethod.value' })
-    });
-
-    test('no args', () => {
-        const result = local.call('syncMethod');
-        expect(result).resolves.toEqual({ method: 'syncMethod', callArgs: [] })
-    });
-
-    test('multiple args', () => {
-        const result = local.call('asyncMethod', ['string', 2188, false, {}, []]);
-        expect(result).resolves.toEqual({ method: 'asyncMethod', callArgs: ['string', 2188, false, {}, []] })
-    });
-
-    test('fail', () => {
-        const result = local.call('methodNotFound');
-        expect(result).rejects.toMatchObject({ code: -32601 })
-    });
+    test('反注册不存在的方法 应该抛异常', () => {
+        expect(() => {
+            local.unexpose('test.method1')
+        }).toThrow();
+    })
 })
 
 describe('invoke', () => {
@@ -142,8 +167,13 @@ describe('notify', () => {
         mockNotificationListener.mockClear();
     });
     test('multiple args', () => {
-        local.notify('test-notification', ['string', 2188, false, {}, []]);
-        expect(mockNotificationListener).toBeCalledWith(['string', 2188, false, {}, []])
+        local.notify('test-notification', 'string', 2188, false, {}, []);
+        expect(mockNotificationListener).toBeCalledWith('string', 2188, false, {}, [])
+        mockNotificationListener.mockClear();
+    });
+    test('object args', () => {
+        local.notify('test-notification', { a: 1 });
+        expect(mockNotificationListener).toBeCalledWith({ a: 1 })
         mockNotificationListener.mockClear();
     });
     test('removeNotification', () => {
