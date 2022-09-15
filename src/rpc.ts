@@ -24,7 +24,7 @@ class RPC extends EventEmitter {
         this.addListener('message', this.handleMessage);
     }
 
-    public call(methodName: string, args?: CallArgs) {
+    public invoke(methodName: string, ...args: Defined[]) {
         return new Promise((resolve, reject) => {
             const id = uuid();
             const requestObject = jsonrpc.request(id, methodName, args);
@@ -36,11 +36,7 @@ class RPC extends EventEmitter {
         })
     }
 
-    public invoke(methodName: string, ...args: Defined[]) {
-        return this.call(methodName, args)
-    }
-
-    public notify(name: string, args?: CallArgs) {
+    public notify(name: string, ...args: Defined[]) {
         const notificationObject = jsonrpc.notification(name, args);
         this.send(notificationObject.serialize());
     }
@@ -73,7 +69,7 @@ class RPC extends EventEmitter {
         if (this.exposeMethods.has(methodName)) {
             this.exposeMethods.delete(methodName);
         } else {
-            throw new Error(`method ${methodName} not exist\r\n${methodName}方法 不存在`)
+            throw new Error(`Method ${methodName} not exist.` + `\r\nMethod ${methodName} 不存在。`)
         }
     }
 
@@ -95,13 +91,13 @@ class RPC extends EventEmitter {
 
     public setTransmitter(transmitter: (message: string) => Promise<unknown>) {
         if (typeof transmitter !== 'function') {
-            throw new Error(`transmitter must be function\r\ntransmitter必须为function`)
+            throw new Error('Transmitter must be function.' + '\r\nTransmitter 必须为 function。')
         }
         this.transmitter = transmitter;
     }
 
     private send = (message: string) => {
-        if (!this.transmitter) return Promise.reject(new Error('transmitter is nil'));
+        if (!this.transmitter) return Promise.reject(new Error('Transmitter is nil'));
         return Promise.resolve(this.transmitter(message))
     }
 
@@ -202,7 +198,11 @@ class RPC extends EventEmitter {
     private handleRPCNotification = (notificationObject: NotificationObject) => {
         const { method, params } = notificationObject;
         if (Object.prototype.hasOwnProperty.call(notificationObject, 'params')) {
-            this.emit(`notification/${method}`, params);
+            if (Array.isArray(params)) {
+                this.emit(`notification/${method}`, ...params);
+            } else {
+                this.emit(`notification/${method}`, params);
+            }
         } else {
             this.emit(`notification/${method}`);
         }

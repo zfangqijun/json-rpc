@@ -1,4 +1,4 @@
-lockfileVersion: 5.4
+lockfileVersion: 5.3
 
 specifiers:
   '@rollup/plugin-commonjs': ^21.0.1
@@ -33,7 +33,7 @@ devDependencies:
   rimraf: 3.0.2
   rollup: 2.62.0
   rollup-plugin-terser: 7.0.2_rollup@2.62.0
-  ts-jest: 27.1.2_gndxfxjynrjw2vajfuk74bncse
+  ts-jest: 27.1.2_334772dd386c536d54092d15fe05a291
   typescript: 4.5.4
 
 packages:
@@ -3001,7 +3001,7 @@ packages:
       punycode: 2.1.1
     dev: true
 
-  /ts-jest/27.1.2_gndxfxjynrjw2vajfuk74bncse:
+  /ts-jest/27.1.2_334772dd386c536d54092d15fe05a291:
     resolution: {integrity: sha512-eSOiJOWq6Hhs6Khzk5wKC5sgWIXgXqOCiIl1+3lfnearu58Hj4QpE5tUhQcA3xtZrELbcvAGCsd6HB8OsaVaTA==}
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
     hasBin: true
