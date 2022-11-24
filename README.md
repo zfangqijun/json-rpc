@@ -7,7 +7,7 @@
 
 ## 特点
 
-- 弱化client/server，任何一端都可以主动发出request和notification
+- 弱化client/server，任何一端都可以主动发出`request`和`notification`
 - 报文运输层（Transport）可插拔
 
 ### 可应用的场景举例
