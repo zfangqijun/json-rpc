@@ -1,0 +1,26 @@
+# tab空格数
+tabWidth = 4
+
+# 尾部分号 
+semi = false
+
+# 单引号
+singleQuote = true
+
+# 单行长度
+printWidth = 120
+
+# "consistent" 如果对象中的至少一个属性需要引号，请引用所有属性。
+# "as-needed"  仅在需要的情况下添加对象属性的引号。
+# "preserve"   尊重对象属性中引号的输入使用。
+quoteProps = "consistent"
+
+# jsx单引号
+jsxSingleQuote = true
+
+# false {foo: bar}
+# true { foo: bar }
+bracketSpacing = false
+
+# html 尾部 >
+bracketSameLine = true
