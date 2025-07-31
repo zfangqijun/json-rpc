@@ -8,7 +8,10 @@ export type CallArgs = RpcParams;
 
 export type Result = string | number | boolean | object | null;
 
-type ResponseCallback = (result: Result) => void;
+type ResponseCallback = {
+    resolve: (result: Result) => void;
+    reject: (error: any) => void;
+};
 
 export type RPCMethod = (...args: unknown[]) => Result | Promise<Result> | void;
 
@@ -28,7 +31,7 @@ class RPC extends EventEmitter {
         return new Promise((resolve, reject) => {
             const id = uuid();
             const requestObject = jsonrpc.request(id, methodName, args);
-            this.responseCallbackMap.set(id, resolve);
+            this.responseCallbackMap.set(id, { resolve, reject });
             this.send(requestObject.serialize()).catch((error) => {
                 this.responseCallbackMap.delete(id)
                 reject(error);
@@ -181,17 +184,19 @@ class RPC extends EventEmitter {
 
     private handleRPCSuccess = (successObject: SuccessObject) => {
         const { id, result } = successObject;
-        const resolve = this.responseCallbackMap.get(id as string);
-        if (resolve) {
-            resolve(result)
+        const callback = this.responseCallbackMap.get(id as string);
+        if (callback) {
+            callback.resolve(result);
+            this.responseCallbackMap.delete(id as string);
         }
     }
 
     private handleRPCError = (errorObject: ErrorObject) => {
         const { id, error } = errorObject;
-        const resolve = this.responseCallbackMap.get(id as string);
-        if (resolve) {
-            resolve(Promise.reject(error))
+        const callback = this.responseCallbackMap.get(id as string);
+        if (callback) {
+            callback.reject(error);
+            this.responseCallbackMap.delete(id as string);
         }
     }
 
