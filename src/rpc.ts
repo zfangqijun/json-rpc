@@ -31,6 +31,37 @@ export type RpcHandler = (...args: unknown[]) => Result | Promise<Result> | void
 
 export type RPCMethod = RpcHandler;
 
+type RpcErrorLike = {
+    message: string;
+    code: number;
+    data?: unknown;
+};
+
+const isRpcErrorLike = (error: unknown): error is RpcErrorLike => {
+    if (error instanceof jsonrpc.JsonRpcError) {
+        return true;
+    }
+
+    if (typeof error !== 'object' || error === null) {
+        return false;
+    }
+
+    const maybeError = error as Partial<RpcErrorLike>;
+    return typeof maybeError.message === 'string' && Number.isInteger(maybeError.code);
+}
+
+const toRpcError = (error: unknown) => {
+    if (error instanceof jsonrpc.JsonRpcError) {
+        return error;
+    }
+
+    if (isRpcErrorLike(error)) {
+        return new jsonrpc.JsonRpcError(error.message, error.code, error.data);
+    }
+
+    return new jsonrpc.JsonRpcError('对端方法执行内部异常', 32000, Object.prototype.valueOf.call(error));
+}
+
 class Rpc extends EventEmitter {
     private registeredMethods: Map<string, RpcHandler> = new Map();
 
@@ -206,7 +237,7 @@ class Rpc extends EventEmitter {
                 this.sendResponse(successObject.serialize())
             }
             catch (error) {
-                const jsonRpcError = new jsonrpc.JsonRpcError('对端方法执行内部异常', 32000, Object.prototype.valueOf.call(error))
+                const jsonRpcError = toRpcError(error)
                 const errorObject = jsonrpc.error(id, jsonRpcError)
                 this.sendResponse(errorObject.serialize())
             }

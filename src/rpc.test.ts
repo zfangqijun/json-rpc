@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events'
+import { jsonrpc } from 'jsonrpc-lite'
 import { Result, Rpc, RPC } from './rpc'
 
 const createPair = () => {
@@ -190,6 +191,35 @@ describe('invoke', () => {
         expect(pendingCount(local)).toBe(0);
 
         await expect(local.invoke('throwMethod')).rejects.toMatchObject({ data: 'throwMethod.value' })
+        expect(pendingCount(local)).toBe(0);
+    });
+
+    test('调用的函数抛出 JSON-RPC 错误时原样返回', async () => {
+        const { local, remote } = createPair();
+        const remoteError = new jsonrpc.JsonRpcError('Remote method failed', -32010, { reason: 'remote-error' });
+        remote.register('rpcErrorMethod', jest.fn().mockRejectedValue(remoteError))
+
+        await expect(local.invoke('rpcErrorMethod')).rejects.toMatchObject({
+            code: -32010,
+            message: 'Remote method failed',
+            data: { reason: 'remote-error' },
+        })
+        expect(pendingCount(local)).toBe(0);
+    });
+
+    test('调用的函数抛出远端错误对象时原样返回', async () => {
+        const { local, remote } = createPair();
+        remote.register('plainRpcErrorMethod', jest.fn().mockRejectedValue({
+            code: -32011,
+            message: 'Plain remote error',
+            data: { reason: 'plain-remote-error' },
+        }))
+
+        await expect(local.invoke('plainRpcErrorMethod')).rejects.toMatchObject({
+            code: -32011,
+            message: 'Plain remote error',
+            data: { reason: 'plain-remote-error' },
+        })
         expect(pendingCount(local)).toBe(0);
     });
 
