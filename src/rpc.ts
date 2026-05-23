@@ -4,31 +4,50 @@ import {
 import { EventEmitter } from 'events';
 import { v4 as uuid } from 'uuid'
 
-export type CallArgs = RpcParams;
+export type InvokeArgs = RpcParams;
 
-export type Result = string | number | boolean | object | null;
+export type JSONPrimitive = string | number | boolean | null;
 
-type ResponseCallback = (result: Result) => void;
+export type JSONValue = JSONPrimitive | JSONObject | JSONArray;
 
-export type RPCMethod = (...args: unknown[]) => Result | Promise<Result> | void;
+export interface JSONObject {
+    [key: string]: JSONValue;
+}
 
-class RPC extends EventEmitter {
-    private exposeMethods: Map<string, RPCMethod> = new Map();
+export type JSONArray = JSONValue[];
+
+export type Result = JSONValue;
+
+export type Transport = (message: string) => unknown | Promise<unknown>;
+
+export type Transmitter = Transport;
+
+type ResponseCallback = {
+    resolve: (result: Result) => void;
+    reject: (error: unknown) => void;
+};
+
+export type RpcHandler = (...args: unknown[]) => Result | Promise<Result> | void;
+
+export type RPCMethod = RpcHandler;
+
+class Rpc extends EventEmitter {
+    private registeredMethods: Map<string, RpcHandler> = new Map();
 
     private responseCallbackMap: Map<string, ResponseCallback> = new Map();
 
-    private transmitter?: (message: string) => Promise<unknown>;
+    private transport?: Transport;
 
     constructor() {
         super();
         this.addListener('message', this.handleMessage);
     }
 
-    public invoke(methodName: string, ...args: Defined[]) {
-        return new Promise((resolve, reject) => {
+    public invoke(methodName: string, ...args: Defined[]): Promise<Result> {
+        return new Promise<Result>((resolve, reject) => {
             const id = uuid();
             const requestObject = jsonrpc.request(id, methodName, args);
-            this.responseCallbackMap.set(id, resolve);
+            this.responseCallbackMap.set(id, { resolve, reject });
             this.send(requestObject.serialize()).catch((error) => {
                 this.responseCallbackMap.delete(id)
                 reject(error);
@@ -36,52 +55,76 @@ class RPC extends EventEmitter {
         })
     }
 
-    public notify(name: string, ...args: Defined[]) {
+    public notify(name: string, ...args: Defined[]): Promise<unknown> {
         const notificationObject = jsonrpc.notification(name, args);
-        this.send(notificationObject.serialize());
+        return this.send(notificationObject.serialize());
     }
 
-    public expose(methodName: string, method: RPCMethod) {
-        if (this.exposeMethods.has(methodName)) {
+    public register(methodName: string, method: RpcHandler) {
+        if (this.registeredMethods.has(methodName)) {
             throw new Error(`method ${methodName} exposed\r\n${methodName}方法已暴露`)
         }
         if (typeof method !== 'function') {
             throw new Error(`method instance must be function\r\n方法实例必须为function`)
         }
-        this.exposeMethods.set(methodName, method);
+        this.registeredMethods.set(methodName, method);
+    }
+
+    public expose(methodName: string, method: RpcHandler) {
+        return this.register(methodName, method);
+    }
+
+    public registerAll(methods: Array<[string, RpcHandler]>): void;
+    public registerAll(methods: object): void;
+    public registerAll(methods: object | Array<[string, RpcHandler]>) {
+        if (!Array.isArray(methods)) {
+            for (const [key, value] of Object.entries(methods)) {
+                if (typeof value === 'function') {
+                    this.register(key, value as RpcHandler);
+                }
+            }
+            return;
+        }
+
+        const entries = methods;
+        for (const [key, value] of entries) {
+            this.register(key, value);
+        }
     }
 
     public exposeFromObject(object: object) {
-        for (const [key, value] of Object.entries(object)) {
-            if (typeof value === 'function') {
-                this.expose(key, value);
-            }
-        }
+        return this.registerAll(object);
     }
 
-    public exposeFromArray(array: Array<[string, RPCMethod]>) {
-        for (const [key, value] of array) {
-            this.expose(key, value);
-        }
+    public exposeFromArray(array: Array<[string, RpcHandler]>) {
+        return this.registerAll(array);
     }
 
-    public unexpose(methodName: string) {
-        if (this.exposeMethods.has(methodName)) {
-            this.exposeMethods.delete(methodName);
+    public unregister(methodName: string) {
+        if (this.registeredMethods.has(methodName)) {
+            this.registeredMethods.delete(methodName);
         } else {
             throw new Error(`Method ${methodName} not exist.` + `\r\nMethod ${methodName} 不存在。`)
         }
     }
 
-    public unexposeAll() {
-        this.exposeMethods.clear();
+    public unexpose(methodName: string) {
+        return this.unregister(methodName);
     }
 
-    public onNotification(name: string, callback: (...args: any[]) => void) {
+    public clearMethods() {
+        this.registeredMethods.clear();
+    }
+
+    public unexposeAll() {
+        return this.clearMethods();
+    }
+
+    public onNotification(name: string, callback: (...args: unknown[]) => void) {
         this.addListener(`notification/${name}`, callback);
     }
 
-    public removeNotification(name: string, callback: (...data: any[]) => void) {
+    public removeNotification(name: string, callback: (...data: unknown[]) => void) {
         this.removeListener(`notification/${name}`, callback);
     }
 
@@ -89,16 +132,30 @@ class RPC extends EventEmitter {
         this.emit('message', message);
     }
 
-    public setTransmitter(transmitter: (message: string) => Promise<unknown>) {
-        if (typeof transmitter !== 'function') {
-            throw new Error('Transmitter must be function.' + '\r\nTransmitter 必须为 function。')
+    public setTransport(transport: Transport) {
+        if (typeof transport !== 'function') {
+            throw new Error('Transport must be function.' + '\r\nTransport 必须为 function。')
         }
-        this.transmitter = transmitter;
+        this.transport = transport;
+    }
+
+    public setTransmitter(transmitter: Transmitter) {
+        return this.setTransport(transmitter);
     }
 
     private send = (message: string) => {
-        if (!this.transmitter) return Promise.reject(new Error('Transmitter is nil'));
-        return Promise.resolve(this.transmitter(message))
+        if (!this.transport) return Promise.reject(new Error('Transport is nil'));
+        try {
+            return Promise.resolve(this.transport(message))
+        } catch (error) {
+            return Promise.reject(error)
+        }
+    }
+
+    private sendResponse = (message: string) => {
+        this.send(message).catch((error) => {
+            this.emit('sendError', error);
+        })
     }
 
     private handleMessage = (message: string) => {
@@ -130,11 +187,11 @@ class RPC extends EventEmitter {
 
     private handleRPCRequest = (requestObject: RequestObject) => {
         const { method: methodName, id, params } = requestObject;
-        const method = this.exposeMethods.get(methodName);
+        const method = this.registeredMethods.get(methodName);
 
         if (method === undefined) {
             const errorObject = jsonrpc.error(id, jsonrpc.JsonRpcError.methodNotFound('该方法不存在或无效'))
-            this.send(errorObject.serialize())
+            this.sendResponse(errorObject.serialize())
             return;
         }
 
@@ -146,12 +203,12 @@ class RPC extends EventEmitter {
                 }
 
                 const successObject = jsonrpc.success(id, result)
-                this.send(successObject.serialize())
+                this.sendResponse(successObject.serialize())
             }
             catch (error) {
                 const jsonRpcError = new jsonrpc.JsonRpcError('对端方法执行内部异常', 32000, Object.prototype.valueOf.call(error))
                 const errorObject = jsonrpc.error(id, jsonRpcError)
-                this.send(errorObject.serialize())
+                this.sendResponse(errorObject.serialize())
             }
         }
 
@@ -176,22 +233,24 @@ class RPC extends EventEmitter {
         }
 
         const errorObject = jsonrpc.error(id, jsonrpc.JsonRpcError.invalidParams('无效的方法参数'))
-        this.send(errorObject.serialize())
+        this.sendResponse(errorObject.serialize())
     }
 
     private handleRPCSuccess = (successObject: SuccessObject) => {
         const { id, result } = successObject;
-        const resolve = this.responseCallbackMap.get(id as string);
-        if (resolve) {
-            resolve(result)
+        const callback = this.responseCallbackMap.get(id as string);
+        if (callback) {
+            this.responseCallbackMap.delete(id as string);
+            callback.resolve(result as Result)
         }
     }
 
     private handleRPCError = (errorObject: ErrorObject) => {
         const { id, error } = errorObject;
-        const resolve = this.responseCallbackMap.get(id as string);
-        if (resolve) {
-            resolve(Promise.reject(error))
+        const callback = this.responseCallbackMap.get(id as string);
+        if (callback) {
+            this.responseCallbackMap.delete(id as string);
+            callback.reject(error)
         }
     }
 
@@ -209,4 +268,4 @@ class RPC extends EventEmitter {
     }
 }
 
-export { RPC };
+export { Rpc, Rpc as RPC };

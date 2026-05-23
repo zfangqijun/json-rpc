@@ -30,17 +30,17 @@ npm i jsonrpcv2
 
 ```ts
 import { WebSocketServer } from 'ws';
-import { RPC } from 'jsonrpcv2';
+import { Rpc } from 'jsonrpcv2';
 
-const serverRPC = new RPC();
+const serverRpc = new Rpc();
 
 // 注册同步方法
-serverRPC.expose('syncMethod', () => {
+serverRpc.register('syncMethod', () => {
     return 'syncMethod.result';
 });
 
 // 注册异步方法
-serverRPC.expose('asyncMethod', () => {
+serverRpc.register('asyncMethod', () => {
     return Promise.resolve('asyncMethod.result');
 });
 
@@ -50,12 +50,20 @@ const wss = new WebSocketServer({
 
 wss.on('connection', (websocket) => {
     // rpc通过websocket发送消息
-    serverRPC.setTransmitter((message) => {
-        websocket.send(message);
+    serverRpc.setTransport((message) => {
+        return new Promise((resolve, reject) => {
+            websocket.send(message, (error) => {
+                if (error) {
+                    reject(error);
+                    return;
+                }
+                resolve(undefined);
+            });
+        });
     });
     // websocket接受到消息转发给rpc
     websocket.on('message', (message) => {
-        serverRPC.receive(Buffer.from(message).toString());
+        serverRpc.receive(Buffer.from(message).toString());
     });
 });
 ```
@@ -63,15 +71,23 @@ wss.on('connection', (websocket) => {
 ### 浏览器
 
 ```ts
-import { RPC } from 'jsonrpcv2';
+import { Rpc } from 'jsonrpcv2';
 
-const clientRPC = new RPC();
+const clientRpc = new Rpc();
 
-const ws = new WebSocket('localhost:2188');
+const ws = new WebSocket('ws://localhost:2188');
+
+clientRpc.setTransport((message) => {
+    ws.send(message);
+});
+
+ws.onmessage = function (event) {
+    clientRpc.receive(event.data);
+};
 
 ws.onopen = function () {
     // 调用服务端syncMethod方法
-    clientRPC.invoke('syncMethod')
+    clientRpc.invoke('syncMethod')
         .then((result) => {
             console.log(result); // syncMethod.result
         })
@@ -80,7 +96,7 @@ ws.onopen = function () {
         });
 
     // 调用服务端 asyncMethod 方法
-    clientRPC.invoke('asyncMethod')
+    clientRpc.invoke('asyncMethod')
         .then((result) => {
             console.log(result); // asyncMethod.result
         })
@@ -92,37 +108,55 @@ ws.onopen = function () {
 
 ## API
 
-### rpc = new RPC()
+### rpc = new Rpc()
 
 ```ts
-import { RPC } from 'jsonrpcv2'
-const rpc = new RPC();
+import { Rpc } from 'jsonrpcv2'
+const rpc = new Rpc();
 ```
 
 ### rpc.receive(*message*)
 
-接收的对端RPC报文，具体如何来，取决于你的transmitter
+接收对端 RPC 报文，报文如何到达取决于你接入的 transport
 
-- `message` {`string`} JSON RPC报文
+- `message` {`string`} JSON-RPC 报文
+- 如果报文无法被解析为合法 JSON-RPC 消息，会触发 `invalid` 事件
 
-### rpc.setTransmitter(*transmitter*)
+### rpc.setTransport(*transport*)
 
-发送到RPC报文到对端，报文如何发送到对端，取决于你的transmitter
+设置发送 JSON-RPC 报文到对端的 transport
 
-- `transmitter` {`(message:string)=>Promise`} 发送通道
+- `transport` {`(message:string)=>unknown|Promise<unknown>`} 发送通道
+- transport 可以是同步函数，也可以返回 Promise；发送失败时，`invoke` / `notify` 会返回 rejected Promise
 
-### rpc.expose(*methodName*, *method*)
+### rpc.register(*methodName*, *method*)
 
 暴露方法，供对端调用
 
 - `methodName` {`string`} 暴露的方法名称
 - `method` {`Function`} 方法实例
 
-### rpc.unexpose(*methodName*)
+### rpc.registerAll(*object*)
+
+批量暴露对象上的函数属性，属性名作为方法名
+
+- `object` {`object`} 方法对象
+
+### rpc.registerAll(*array*)
+
+批量暴露方法元组
+
+- `array` {`Array<[string, Function]>`} 方法名称和方法实例
+
+### rpc.unregister(*methodName*)
 
 取消已暴露的方法
 
 - `methodName` {`string`} 已暴露的方法名称
+
+### rpc.clearMethods()
+
+取消所有已暴露的方法
 
 ### rpc.invoke(*methodName*,*...args*)
 
@@ -131,6 +165,8 @@ const rpc = new RPC();
 - `methodName` {`string`} 方法名称
 - `args` {`Array`} 参数
 - `return` {`Promise<Result>`}
+- 对端返回 JSON-RPC error、发送失败时，Promise 会 reject
+- 暴露方法返回 `undefined` 时，会按 JSON-RPC 响应为 `null`
 
 ### rpc.onNotification(*name*, *callback*)
 
@@ -145,6 +181,7 @@ const rpc = new RPC();
 
 - `name` {`string`} 通知名称
 - `args` {`Array`} 参数
+- `return` {`Promise<unknown>`} 发送结果；notification 不会等待对端业务响应
 
 ### rpc.removeNotification(*name*, *callback*)
 
@@ -153,3 +190,11 @@ const rpc = new RPC();
 - `name` {`string`} 通知名称
 - `callback` {`Function`} 通知回调
 
+### 事件
+
+- `invalid` 收到无效 JSON-RPC 报文时触发
+- `sendError` 处理对端 request 后发送 success/error 响应失败时触发
+
+### 兼容旧 API
+
+`RPC`、`setTransmitter`、`expose`、`exposeFromObject`、`exposeFromArray`、`unexpose`、`unexposeAll` 仍然可用，分别对应新的 `Rpc`、`setTransport`、`register`、`registerAll`、`registerAll`、`unregister`、`clearMethods`。
