@@ -1,200 +1,263 @@
 [![Node.js CI](https://github.com/zfangqijun/json-rpc/actions/workflows/node.js.yml/badge.svg)](https://github.com/zfangqijun/json-rpc/actions/workflows/node.js.yml)
 [![Node.js Package](https://github.com/zfangqijun/json-rpc/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/zfangqijun/json-rpc/actions/workflows/npm-publish.yml)
 
-# json-rpc
+# jsonrpcv2
 
-[JSON-RPC 2.0](https://wiki.geekdream.com/Specification/json-rpc_2.0.html) 协议的JavaScript实现
+A [JSON-RPC 2.0](https://www.jsonrpc.org/specification) library for JavaScript / TypeScript.
 
-## 特点
+Peer-to-peer by design: either side can call the other's methods and push notifications. The transport layer is pluggable — swap in WebSocket, IPC, or anything that sends strings.
 
-- 弱化client/server，任何一端都可以主动发出`request`和`notification`
-- 报文运输层（Transport）可插拔
-
-### 可应用的场景举例
-
-#### 前后端
-浏览器 <- WebSocket -> 服务端
-
-#### Electron
-Renderer Progress <- WebSocket/IPC -> Main Progress
-
-## 安装和使用
+## Install
 
 ```bash
-npm i jsonrpcv2
+npm install jsonrpcv2
 ```
-
-## 使用
-
-### 服务端
-
-```ts
-import { WebSocketServer } from 'ws';
-import { Rpc } from 'jsonrpcv2';
-
-const serverRpc = new Rpc();
-
-// 注册同步方法
-serverRpc.register('syncMethod', () => {
-    return 'syncMethod.result';
-});
-
-// 注册异步方法
-serverRpc.register('asyncMethod', () => {
-    return Promise.resolve('asyncMethod.result');
-});
-
-const wss = new WebSocketServer({
-    port: 2188
-});
-
-wss.on('connection', (websocket) => {
-    // rpc通过websocket发送消息
-    serverRpc.setTransport((message) => {
-        return new Promise((resolve, reject) => {
-            websocket.send(message, (error) => {
-                if (error) {
-                    reject(error);
-                    return;
-                }
-                resolve(undefined);
-            });
-        });
-    });
-    // websocket接受到消息转发给rpc
-    websocket.on('message', (message) => {
-        serverRpc.receive(Buffer.from(message).toString());
-    });
-});
-```
-
-### 浏览器
-
-```ts
-import { Rpc } from 'jsonrpcv2';
-
-const clientRpc = new Rpc();
-
-const ws = new WebSocket('ws://localhost:2188');
-
-clientRpc.setTransport((message) => {
-    ws.send(message);
-});
-
-ws.onmessage = function (event) {
-    clientRpc.receive(event.data);
-};
-
-ws.onopen = function () {
-    // 调用服务端syncMethod方法
-    clientRpc.invoke('syncMethod')
-        .then((result) => {
-            console.log(result); // syncMethod.result
-        })
-        .catch((error) => {
-            // error
-        });
-
-    // 调用服务端 asyncMethod 方法
-    clientRpc.invoke('asyncMethod')
-        .then((result) => {
-            console.log(result); // asyncMethod.result
-        })
-        .catch((error) => {
-            // error
-        })
-}
-```
-
-## API
-
-### rpc = new Rpc()
 
 ```ts
 import { Rpc } from 'jsonrpcv2'
-const rpc = new Rpc();
 ```
 
-### rpc.receive(*message*)
+## Quick example
 
-接收对端 RPC 报文，报文如何到达取决于你接入的 transport
+```ts
+const rpc = new Rpc()
 
-- `message` {`string`} JSON-RPC 报文
-- 如果报文无法被解析为合法 JSON-RPC 消息，会触发 `invalid` 事件
+// Expose a method the other side can call
+rpc.register('add', (a, b) => a + b)
 
-### rpc.setTransport(*transport*)
+// Call a method on the other side
+const result = await rpc.invoke('add', 3, 4) // 7
 
-设置发送 JSON-RPC 报文到对端的 transport
+// Send a one-way notification
+rpc.notify('chat', 'hello')
+```
 
-- `transport` {`(message:string)=>unknown|Promise<unknown>`} 发送通道
-- transport 可以是同步函数，也可以返回 Promise；发送失败时，`invoke` / `notify` 会返回 rejected Promise
+To make it actually talk to another process, wire in a transport:
 
-### rpc.register(*methodName*, *method*)
+```ts
+rpc.setTransport((message) => ws.send(message))
+ws.on('message', (data) => rpc.receive(data.toString()))
+```
 
-暴露方法，供对端调用
+## Core concepts
 
-- `methodName` {`string`} 暴露的方法名称
-- `method` {`Function`} 方法实例
+**Peer-to-peer.** There is no client / server distinction. Any `Rpc` instance can register methods *and* invoke remote methods. Both sides use the same API.
 
-### rpc.registerAll(*object*)
+**Pluggable transport.** `setTransport` accepts any function that sends a string. The matching `receive` feeds incoming strings back in. Common transports: WebSocket, `window.postMessage`, Electron IPC, `process.send`.
 
-批量暴露对象上的函数属性，属性名作为方法名
+**Request → Response.** `invoke(method, ...args)` returns a `Promise<Result>`. If the remote method throws, the promise rejects with a `JsonRpcError`.
 
-- `object` {`object`} 方法对象
+**Notification (fire-and-forget).** `notify(name, ...args)` sends a one-way message; no response is expected. Listen on the other side with `onNotification`.
 
-### rpc.registerAll(*array*)
+**Error codes.** The library uses standard JSON-RPC error codes. Uncaught handler errors become code `-32000`. Methods that throw a `JsonRpcError` preserve their own code and data.
 
-批量暴露方法元组
+## API reference
 
-- `array` {`Array<[string, Function]>`} 方法名称和方法实例
+### `new Rpc()`
 
-### rpc.unregister(*methodName*)
+Creates an instance. Also exported as `RPC` (legacy alias).
 
-取消已暴露的方法
+```ts
+const rpc = new Rpc()
+```
 
-- `methodName` {`string`} 已暴露的方法名称
+### `rpc.register(methodName, handler)`
 
-### rpc.clearMethods()
+Expose a method so the remote side can `invoke` it.
 
-取消所有已暴露的方法
+- `methodName: string`
+- `handler: (...args) => Result | Promise<Result> | void`
+- Throws if the method is already registered or if `handler` is not a function.
 
-### rpc.invoke(*methodName*,*...args*)
+```ts
+rpc.register('ping', () => 'pong')
+rpc.register('getUser', async (id) => fetchUser(id))
+```
 
-调用对端方法
+### `rpc.registerAll(source)`
 
-- `methodName` {`string`} 方法名称
-- `args` {`Array`} 参数
-- `return` {`Promise<Result>`}
-- 对端返回 JSON-RPC error、发送失败时，Promise 会 reject
-- 暴露方法返回 `undefined` 时，会按 JSON-RPC 响应为 `null`
+Register multiple methods at once.
 
-### rpc.onNotification(*name*, *callback*)
+**From an object — keys become method names:**
 
-添加通知监听
+```ts
+rpc.registerAll({
+  add: (a, b) => a + b,
+  subtract: (a, b) => a - b,
+})
+```
 
-- `name` {`string`} 通知名称
-- `callback` {`Function`} 通知回调
+**From an array of `[name, handler]` tuples:**
 
-### rpc.notify(*name*,*...args*)
+```ts
+rpc.registerAll([
+  ['add', (a, b) => a + b],
+  ['subtract', (a, b) => a - b],
+])
+```
 
-通知对端
+Non-function properties in an object are silently skipped.
 
-- `name` {`string`} 通知名称
-- `args` {`Array`} 参数
-- `return` {`Promise<unknown>`} 发送结果；notification 不会等待对端业务响应
+### `rpc.unregister(methodName)`
 
-### rpc.removeNotification(*name*, *callback*)
+Remove a previously registered method. Throws if the method does not exist.
 
-删除通知监听
+### `rpc.clearMethods()`
 
-- `name` {`string`} 通知名称
-- `callback` {`Function`} 通知回调
+Remove all registered methods at once.
 
-### 事件
+### `rpc.invoke(methodName, ...args)`
 
-- `invalid` 收到无效 JSON-RPC 报文时触发
-- `sendError` 处理对端 request 后发送 success/error 响应失败时触发
+Call a method on the remote side. Returns `Promise<Result>`.
 
-### 兼容旧 API
+- The returned Promise **rejects** if: the remote handler throws, the remote returns a JSON-RPC error, or the transport fails to send.
+- If the handler returns `undefined`, the caller receives `null` (per JSON-RPC spec).
 
-`RPC`、`setTransmitter`、`expose`、`exposeFromObject`、`exposeFromArray`、`unexpose`、`unexposeAll` 仍然可用，分别对应新的 `Rpc`、`setTransport`、`register`、`registerAll`、`registerAll`、`unregister`、`clearMethods`。
+### `rpc.notify(name, ...args)`
+
+Send a one-way notification. Returns `Promise<unknown>` that resolves when the transport has sent the message; the remote side does not send a response.
+
+```ts
+rpc.notify('cursorMoved', { x: 100, y: 200 })
+```
+
+### `rpc.onNotification(name, callback)`
+
+Listen for incoming notifications.
+
+```ts
+rpc.onNotification('cursorMoved', (pos) => {
+  console.log(pos.x, pos.y)
+})
+```
+
+### `rpc.removeNotification(name, callback)`
+
+Remove a notification listener. The `callback` reference must match the one passed to `onNotification`.
+
+### `rpc.setTransport(transport)` / `rpc.receive(message)`
+
+Wire the RPC instance to a communication channel.
+
+- `setTransport(fn)` — `fn` receives a serialized JSON-RPC string and should send it to the other side. Can be sync or async.
+- `receive(msg)` — call this with every incoming string from the other side.
+
+Call `setTransport` once per connection. You can call it again to swap transports.
+
+### Events
+
+`Rpc` extends `EventEmitter`. Two events are emitted:
+
+| Event | When |
+|-------|------|
+| `'invalid'` | An incoming message failed to parse as valid JSON-RPC |
+| `'sendError'` | Sending a response back to the other side failed |
+
+```ts
+rpc.on('invalid', (raw) => console.warn('Bad message:', raw))
+rpc.on('sendError', (err) => console.error('Send failed:', err))
+```
+
+## Examples
+
+### WebSocket (browser ↔ Node server)
+
+**Server (Node):**
+
+```ts
+import { WebSocketServer } from 'ws'
+import { Rpc } from 'jsonrpcv2'
+
+const rpc = new Rpc()
+rpc.register('echo', (s) => s)
+
+const wss = new WebSocketServer({ port: 2188 })
+wss.on('connection', (ws) => {
+  rpc.setTransport((msg) => new Promise((resolve, reject) => {
+    ws.send(msg, (err) => err ? reject(err) : resolve())
+  }))
+  ws.on('message', (data) => rpc.receive(data.toString()))
+})
+```
+
+**Browser:**
+
+```ts
+import { Rpc } from 'jsonrpcv2'
+
+const rpc = new Rpc()
+const ws = new WebSocket('ws://localhost:2188')
+
+ws.onopen = () => {
+  rpc.setTransport((msg) => ws.send(msg))
+  rpc.invoke('echo', 'hi').then(console.log) // "hi"
+}
+ws.onmessage = (e) => rpc.receive(e.data)
+```
+
+### Electron (renderer ↔ main via IPC)
+
+**Renderer:**
+
+```ts
+const { ipcRenderer } = require('electron')
+const rpc = new Rpc()
+rpc.setTransport((msg) => ipcRenderer.send('rpc', msg))
+ipcRenderer.on('rpc', (_, msg) => rpc.receive(msg))
+```
+
+**Main process:**
+
+```ts
+const { ipcMain } = require('electron')
+const rpc = new Rpc()
+// ipcMain forwards messages the same way — symmetrical API
+```
+
+### Bidirectional communication
+
+Either side can register methods and call remote methods. This means both ends usually set up a mirror pattern:
+
+```ts
+// Side A
+const rpc = new Rpc()
+rpc.register('getData', () => someData)
+rpc.setTransport(/* ... */)
+
+// Side B
+const rpc = new Rpc()
+rpc.setTransport(/* ... */)
+const data = await rpc.invoke('getData')
+```
+
+## TypeScript types
+
+```ts
+import type {
+  Rpc,           // the main class (also the default export)
+  RpcHandler,    // (...args: unknown[]) => Result | Promise<Result> | void
+  Transport,     // (message: string) => unknown | Promise<unknown>
+  Result,        // JSONValue
+  JSONValue,     // JSONPrimitive | JSONObject | JSONArray
+  JSONPrimitive, // string | number | boolean | null
+  JSONObject,    // { [key: string]: JSONValue }
+  JSONArray,     // JSONValue[]
+} from 'jsonrpcv2'
+```
+
+## Legacy API (still available)
+
+The old names are kept for backwards compatibility. Prefer the new names in new code.
+
+| Current | Legacy |
+|---------|--------|
+| `Rpc` | `RPC` |
+| `setTransport` | `setTransmitter` |
+| `register` | `expose` |
+| `registerAll` | `exposeFromObject` / `exposeFromArray` |
+| `unregister` | `unexpose` |
+| `clearMethods` | `unexposeAll` |
+
+## License
+
+MIT
